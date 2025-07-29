@@ -28,7 +28,8 @@
 
             document.getElementById('resultado').textContent = "⏳ Processando...";
 
-            fetch('https://SEU_BACKEND_URL.onrender.com/executar', {
+            fetch('https://gerador-ctr-backend.onrender.com/executar', {
+
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ ids: ids })
