@@ -1,62 +1,106 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gerador de Documentos CTR</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background: #f2f2f2;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
     }
     textarea {
       width: 100%;
-      height: 120px;
+      height: 150px;
       padding: 10px;
       font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
     }
     button {
-      margin-top: 10px;
-      padding: 10px 20px;
+      margin-top: 15px;
+      padding: 12px 25px;
       font-size: 16px;
+      border: none;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #555;
+      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>Gerador de Documentos CTR</h1>
   <p>Insira os IDs (um por linha):</p>
-  <textarea id="ids"></textarea><br>
-  <button onclick="gerar()">Gerar PDFs</button>
+  <textarea id="ids"></textarea>
+  <button id="btnGerar" onclick="gerar()">Gerar PDFs</button>
+  <div id="status"></div>
 
   <script>
+    const backendURL = "https://gerador-ctr-backend.onrender.com/gerar"; // troque se mudar o backend
+
     async function gerar() {
       const idsTexto = document.getElementById("ids").value;
-      const ids = idsTexto.split(/\\n|,/).map(i => i.trim()).filter(Boolean);
+      const ids = idsTexto.split(/\n|,/).map(i => i.trim()).filter(Boolean);
+      const statusDiv = document.getElementById("status");
+      const btn = document.getElementById("btnGerar");
+
       if (!ids.length) {
         alert("Insira pelo menos um ID.");
         return;
       }
 
-      const resposta = await fetch("https://gerador-ctr-backend.onrender.com/gerar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ ids })
-      });
+      btn.disabled = true;
+      statusDiv.textContent = `⏳ Processando ${ids.length} IDs... Aguarde.`;
 
-      if (!resposta.ok) {
-        alert("Erro ao gerar PDFs.");
-        return;
+      try {
+        const resposta = await fetch(backendURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids })
+        });
+
+        if (!resposta.ok) {
+          statusDiv.textContent = `❌ Erro ao gerar PDFs: ${resposta.status}`;
+          btn.disabled = false;
+          return;
+        }
+
+        const blob = await resposta.blob();
+        if (blob.size === 0) {
+          statusDiv.textContent = `⚠️ Nenhum PDF gerado. Verifique os IDs.`;
+          btn.disabled = false;
+          return;
+        }
+
+        statusDiv.textContent = "✅ PDFs gerados com sucesso! Iniciando download...";
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Documentos_CTR.zip";
+        a.click();
+
+      } catch (e) {
+        statusDiv.textContent = `❌ Erro na requisição: ${e}`;
+      } finally {
+        btn.disabled = false;
       }
-
-      const blob = await resposta.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Documentos_CTR.zip";
-      a.click();
     }
   </script>
 </body>
