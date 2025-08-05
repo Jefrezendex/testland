@@ -1,96 +1,230 @@
-<script>
-  const backendURL = "https://gerador-ctr-backend.onrender.com";
-  let session_id = crypto.randomUUID();
-  let progressoTimer = null;
-
-  async function gerar() {
-    const idsTexto = document.getElementById("ids").value;
-    const ids = idsTexto.split(/[\n,;]+/).map(i => i.trim()).filter(Boolean);
-    const statusDiv = document.getElementById("status");
-    const road = document.querySelector(".road-container");
-    const truck = document.getElementById("truck");
-    const progressText = document.getElementById("progressText");
-    const btn = document.getElementById("btnGerar");
-
-    if (!ids.length) {
-      alert("Insira pelo menos um ID.");
-      return;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gerador de Documentos CTR</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+    header {
+      background: #007bff;
+      color: white;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    main {
+      margin-top: 30px;
+      width: 90%;
+      max-width: 600px;
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 30px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .road-container {
+      position: relative;
+      width: 100%;
+      height: 70px;
+      margin-top: 30px;
+      background: #444;
+      border-radius: 35px;
+      overflow: hidden;
+      display: none;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+    }
+    .road-container::after {
+      content: "";
+      position: absolute;
+      top: 32px;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background-image: repeating-linear-gradient(
+        to right,
+        yellow 0 30px,
+        transparent 30px 60px
+      );
+    }
+    .truck {
+      position: absolute;
+      top: 16px;
+      left: 0;
+      font-size: 40px;
+      transition: left 0.5s, transform 1s;
+      transform-origin: center bottom;
+      transform: scaleX(-1) rotate(0deg);
+      user-select: none;
+    }
+    .truck.dumping {
+      transform: scaleX(-1) rotate(-30deg);
+      transition-timing-function: ease-out;
+    }
+    .progress-text {
+      position: absolute;
+      width: 100%;
+      top: -25px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: #333;
+      user-select: none;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #555;
+      white-space: pre-line;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>Gerador de Documentos CTR</header>
+  <main>
+    <p>Insira os IDs (um por linha):</p>
+    <textarea id="ids"></textarea>
+    <button id="btnGerar" onclick="gerar()">Gerar PDFs</button>
 
-    btn.disabled = true;
-    session_id = crypto.randomUUID();
-    statusDiv.textContent = `⏳ Enviando ${ids.length} documentos em lotes...`;
-    road.style.display = "block";
-    truck.style.left = "0px";
-    progressText.textContent = "0%";
-    truck.classList.remove("dumping");
+    <div class="road-container">
+      <div class="progress-text" id="progressText">0%</div>
+      <div class="truck" id="truck">🚛</div>
+    </div>
 
-    const maxWidth = road.offsetWidth - truck.offsetWidth;
-    const tamanhoLote = 50;
+    <div id="status"></div>
+  </main>
 
-    // Inicia progresso real
-    progressoTimer = setInterval(() => atualizarProgresso(ids.length, maxWidth), 500);
+  <script>
+    const backendURL = "https://gerador-ctr-backend.onrender.com";
+    let session_id = crypto.randomUUID();
+    let progressoTimer = null;
 
-    // Envia lotes
-    for (let i = 0; i < ids.length; i += tamanhoLote) {
-      const lote = ids.slice(i, i + tamanhoLote);
-      statusDiv.textContent = `⏳ Enviando lote ${Math.floor(i / tamanhoLote) + 1}...`;
+    async function gerar() {
+      const idsTexto = document.getElementById("ids").value;
+      const ids = idsTexto.split(/[\n,;]+/).map(i => i.trim()).filter(Boolean);
+      const statusDiv = document.getElementById("status");
+      const road = document.querySelector(".road-container");
+      const truck = document.getElementById("truck");
+      const progressText = document.getElementById("progressText");
+      const btn = document.getElementById("btnGerar");
 
-      await fetch(backendURL + "/gerar-lote", {
+      if (!ids.length) {
+        alert("Insira pelo menos um ID.");
+        return;
+      }
+
+      btn.disabled = true;
+      session_id = crypto.randomUUID();
+      statusDiv.textContent = `⏳ Enviando ${ids.length} documentos em lotes...`;
+      road.style.display = "block";
+      truck.style.left = "0px";
+      progressText.textContent = "0%";
+      truck.classList.remove("dumping");
+
+      const maxWidth = road.offsetWidth - truck.offsetWidth;
+      const tamanhoLote = 50;
+
+      progressoTimer = setInterval(() => atualizarProgresso(ids.length, maxWidth), 500);
+
+      for (let i = 0; i < ids.length; i += tamanhoLote) {
+        const lote = ids.slice(i, i + tamanhoLote);
+        statusDiv.textContent = `⏳ Enviando lote ${Math.floor(i / tamanhoLote) + 1}...`;
+
+        await fetch(backendURL + "/gerar-lote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: lote, session_id })
+        });
+      }
+
+      clearInterval(progressoTimer);
+      await atualizarProgresso(ids.length, maxWidth);
+
+      statusDiv.textContent = "⏳ Montando ZIP final...";
+      const resposta = await fetch(backendURL + "/finalizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: lote, session_id })
+        body: JSON.stringify({ session_id })
       });
-    }
 
-    clearInterval(progressoTimer); // para contador
-    await atualizarProgresso(ids.length, maxWidth); // última atualização
+      if (!resposta.ok) {
+        statusDiv.textContent = `❌ Erro ao gerar ZIP final: ${resposta.status}`;
+        btn.disabled = false;
+        return;
+      }
 
-    // Monta ZIP final
-    statusDiv.textContent = "⏳ Montando ZIP final...";
-    const resposta = await fetch(backendURL + "/finalizar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id })
-    });
+      const blob = await resposta.blob();
+      truck.style.left = maxWidth + "px";
+      progressText.textContent = "100%";
+      truck.classList.add("dumping");
 
-    if (!resposta.ok) {
-      statusDiv.textContent = `❌ Erro ao gerar ZIP final: ${resposta.status}`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Documentos_CTR_Final.zip";
+      a.click();
+
+      statusDiv.textContent = "✅ Todos os PDFs foram gerados e baixados!";
       btn.disabled = false;
-      return;
+      setTimeout(() => truck.classList.remove("dumping"), 3500);
     }
 
-    const blob = await resposta.blob();
-    truck.style.left = maxWidth + "px";
-    progressText.textContent = "100%";
-    truck.classList.add("dumping");
+    async function atualizarProgresso(totalIds, maxWidth) {
+      try {
+        const resp = await fetch(backendURL + "/progresso", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id, total_ids: totalIds })
+        });
+        const data = await resp.json();
+        const gerados = data.progresso;
+        const total = data.total || totalIds;
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "Documentos_CTR_Final.zip";
-    a.click();
-
-    statusDiv.textContent = "✅ Todos os PDFs foram gerados e baixados!";
-    btn.disabled = false;
-    setTimeout(() => truck.classList.remove("dumping"), 3500);
-  }
-
-  // Atualiza progresso real perguntando ao backend
-  async function atualizarProgresso(totalIds, maxWidth) {
-    const resp = await fetch(backendURL + "/progresso", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id, total_ids: totalIds })
-    });
-    const data = await resp.json();
-    const gerados = data.progresso;
-    const total = data.total || totalIds;
-
-    const perc = Math.floor((gerados / total) * 100);
-    const truck = document.getElementById("truck");
-    const progressText = document.getElementById("progressText");
-    truck.style.left = (maxWidth * (perc / 100)) + "px";
-    progressText.textContent = perc + "%";
-  }
-</script>
+        const perc = Math.floor((gerados / total) * 100);
+        const truck = document.getElementById("truck");
+        const progressText = document.getElementById("progressText");
+        truck.style.left = (maxWidth * (perc / 100)) + "px";
+        progressText.textContent = perc + "%";
+      } catch (e) {
+        // ignorar erro no progresso para não travar a UI
+      }
+    }
+  </script>
+</body>
+</html>
