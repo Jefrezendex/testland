@@ -85,9 +85,9 @@
     }
     .truck {
       position: absolute;
-      top: 5px;
+      top: 10px; /* Ajuste vertical para alinhar na faixa */
       left: 0;
-      font-size: 40px;
+      height: 50px; /* Altura do caminhão */
       transition: left 0.5s;
     }
     .progress-text {
@@ -117,7 +117,7 @@
 
     <div class="road-container">
       <div class="progress-text" id="progressText">0%</div>
-      <div class="truck" id="truck">🚛</div>
+      <img src="caminhao.png" class="truck" id="truck" alt="Caminhão"/>
     </div>
 
     <div id="status"></div>
@@ -149,7 +149,7 @@
 
       // Simular progresso enquanto aguarda backend
       let progresso = 0;
-      const maxWidth = road.offsetWidth - 60; // limite do caminhão
+      const maxWidth = road.offsetWidth - truck.offsetWidth - 10;
 
       const interval = setInterval(() => {
         if (progresso < 90) {
