@@ -113,54 +113,62 @@
         return;
       }
 
+      // Resetar interface
       btn.disabled = true;
       statusDiv.textContent = `⏳ Processando ${ids.length} documentos...`;
       progressContainer.style.display = "block";
       progressBar.style.width = "0%";
       progressBar.textContent = "0%";
 
+      // Simular progresso enquanto aguarda backend
       let progresso = 0;
-
-      // Enviar IDs em lotes de 1 para mostrar progresso por documento
-      for (let i = 0; i < ids.length; i++) {
-        try {
-          statusDiv.textContent = `Baixando ${i+1} de ${ids.length}...`;
-
-          const resposta = await fetch(backendURL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids: [ids[i]] })
-          });
-
-          if (!resposta.ok) {
-            statusDiv.textContent = `❌ Erro ao gerar PDF do ID ${ids[i]}`;
-            continue;
-          }
-
-          const blob = await resposta.blob();
-          if (blob.size === 0) {
-            statusDiv.textContent = `⚠️ ID ${ids[i]} não retornou PDF.`;
-          } else {
-            // Baixar o PDF individualmente
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Documento_${ids[i]}.zip`;
-            a.click();
-          }
-
-          // Atualizar progresso
-          progresso = ((i + 1) / ids.length) * 100;
-          progressBar.style.width = progresso.toFixed(0) + "%";
-          progressBar.textContent = `${i+1}/${ids.length}`;
-
-        } catch (e) {
-          statusDiv.textContent = `❌ Erro no ID ${ids[i]}: ${e}`;
+      const interval = setInterval(() => {
+        if (progresso < 90) { // Até 90% enquanto espera o backend
+          progresso += 1;
+          progressBar.style.width = progresso + "%";
+          progressBar.textContent = progresso + "%";
         }
-      }
+      }, 500);
 
-      statusDiv.textContent = "✅ Todos os documentos foram processados!";
-      btn.disabled = false;
+      try {
+        const resposta = await fetch(backendURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids })
+        });
+
+        clearInterval(interval);
+
+        if (!resposta.ok) {
+          statusDiv.textContent = `❌ Erro ao gerar PDFs: ${resposta.status}`;
+          btn.disabled = false;
+          return;
+        }
+
+        const blob = await resposta.blob();
+        if (blob.size === 0) {
+          statusDiv.textContent = `⚠️ Nenhum PDF gerado. Verifique os IDs.`;
+          btn.disabled = false;
+          return;
+        }
+
+        // Concluir barra de progresso
+        progressBar.style.width = "100%";
+        progressBar.textContent = "100%";
+
+        statusDiv.textContent = "✅ PDFs gerados com sucesso! Baixando ZIP...";
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Documentos_CTR.zip";
+        a.click();
+
+      } catch (e) {
+        clearInterval(interval);
+        statusDiv.textContent = `❌ Erro na requisição: ${e}`;
+      } finally {
+        btn.disabled = false;
+      }
     }
   </script>
 </body>
