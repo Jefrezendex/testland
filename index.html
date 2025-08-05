@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gerador de Documentos CTR</title>
   <style>
@@ -85,10 +85,18 @@
     }
     .truck {
       position: absolute;
-      top: 10px; /* Ajuste vertical para alinhar na faixa */
+      top: 16px; /* Alinhado à faixa */
       left: 0;
-      height: 50px; /* Altura do caminhão */
-      transition: left 0.5s;
+      font-size: 40px;
+      transition: left 0.5s, transform 1s;
+      transform-origin: center bottom;
+      transform: scaleX(-1) rotate(0deg);
+      user-select: none;
+    }
+    /* Classe que anima a caçamba levantando */
+    .truck.dumping {
+      transform: scaleX(-1) rotate(-30deg);
+      transition-timing-function: ease-out;
     }
     .progress-text {
       position: absolute;
@@ -98,6 +106,7 @@
       font-weight: bold;
       font-size: 14px;
       color: #333;
+      user-select: none;
     }
     #status {
       margin-top: 15px;
@@ -117,7 +126,7 @@
 
     <div class="road-container">
       <div class="progress-text" id="progressText">0%</div>
-      <img src="caminhao.png" class="truck" id="truck" alt="Caminhão"/>
+      <div class="truck" id="truck">🚛</div>
     </div>
 
     <div id="status"></div>
@@ -128,7 +137,7 @@
 
     async function gerar() {
       const idsTexto = document.getElementById("ids").value;
-      const ids = idsTexto.split(/\n|,/).map(i => i.trim()).filter(Boolean);
+      const ids = idsTexto.split(/[\n,;]+/).map(i => i.trim()).filter(Boolean);
       const statusDiv = document.getElementById("status");
       const road = document.querySelector(".road-container");
       const truck = document.getElementById("truck");
@@ -146,15 +155,17 @@
       road.style.display = "block";
       truck.style.left = "0px";
       progressText.textContent = "0%";
+      truck.classList.remove("dumping");
+
+      // Calcular limite do caminhão
+      const maxWidth = road.offsetWidth - truck.offsetWidth;
 
       // Simular progresso enquanto aguarda backend
       let progresso = 0;
-      const maxWidth = road.offsetWidth - truck.offsetWidth - 10;
-
       const interval = setInterval(() => {
         if (progresso < 90) {
           progresso += 1;
-          truck.style.left = (maxWidth * (progresso/100)) + "px";
+          truck.style.left = (maxWidth * (progresso / 100)) + "px";
           progressText.textContent = progresso + "%";
         }
       }, 500);
@@ -185,7 +196,12 @@
         truck.style.left = maxWidth + "px";
         progressText.textContent = "100%";
 
-        statusDiv.textContent = "✅ PDFs gerados com sucesso! Baixando ZIP...";
+        // Animação da caçamba levantando
+        setTimeout(() => {
+          truck.classList.add("dumping");
+          statusDiv.textContent = "✅ PDFs gerados com sucesso! Baixando ZIP...";
+        }, 500);
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -197,6 +213,10 @@
         statusDiv.textContent = `❌ Erro na requisição: ${e}`;
       } finally {
         btn.disabled = false;
+        // Remover animação da caçamba após 3 segundos para poder rodar novamente
+        setTimeout(() => {
+          truck.classList.remove("dumping");
+        }, 3500);
       }
     }
   </script>
